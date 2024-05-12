@@ -1,0 +1,178 @@
+﻿@page "/weather"
+@attribute [StreamRendering]
+@rendermode InteractiveServer
+
+<PageTitle>Weather</PageTitle>
+
+<h1>Weather</h1>
+
+<p>This component demonstrates showing data.</p>
+<p role="status">Warm days count (above 15(C)): @warmDaysCount</p>
+
+<input class="form-control" @oninput="Input" placeholder="Filter by name..." />
+<br>
+<br />
+<button class="btn btn-primary" @onclick="FilterWarmDays">Show days below 15°C</button>
+<button class="btn btn-primary" @onclick="RestoreForecast">Restore</button>
+
+@if (forecasts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var forecast in filteredForecasts ?? forecasts)
+            {
+                <tr>
+                    <td>@forecast.Date.ToShortDateString()</td>
+                    <td>@forecast.TemperatureC</td>
+                    <td>@forecast.TemperatureF</td>
+                    <td>@forecast.Summary</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private WeatherForecast[]? forecasts;
+    private WeatherForecast[]? filteredForecasts;
+    private int warmDaysCount = 0;
+    private string searchTerm = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(500);
+
+        var startDate = DateOnly.FromDateTime(DateTime.Now);
+        var summaries = new[] { "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching" };
+  
+        forecasts = Enumerable.Range(1, 10).Select(index =>
+        {
+            int temperatureC = Random.Shared.Next(-20, 55);
+            string summary; 
+
+            if (temperatureC < -10)
+            {
+                summary = "Freezing";
+            }
+            else if (temperatureC < -3)
+            {
+                summary = "Bracing";
+            }
+            else if (temperatureC < 0)
+            {
+                summary = "Chilly";
+            }
+            else if (temperatureC < 5)
+            {
+                summary = "Cool";
+            }
+            else if (temperatureC < 10)
+            {
+                summary = "Mild";
+            }
+            else if (temperatureC <= 15)
+            {
+                summary = "Warm";
+            }
+            else if (temperatureC < 20)
+            {
+                summary = "Balmy";
+            }
+            else if (temperatureC < 25)
+            {
+                summary = "Hot";
+            }
+            else if (temperatureC < 30)
+            {
+                summary = "Sweltering";
+            }
+            else
+            {
+                summary = "Scorching";
+            }
+
+            return new WeatherForecast
+                {
+                    Date = startDate.AddDays(index),
+                    TemperatureC = temperatureC,
+                    Summary = summary
+                };
+        }).ToArray();
+
+
+        CountWarmDays();
+    }
+
+    private void CountWarmDays()
+    {
+        warmDaysCount = forecasts.Count(forecast => forecast.TemperatureC > 15);
+    }
+
+    private void FilterWarmDays()
+    {
+        filteredForecasts = forecasts.Where(forecast => forecast.TemperatureC <= 15).ToArray();
+        warmDaysCount = filteredForecasts.Count(forecast => forecast.TemperatureC > 15);
+    }
+
+    private void RestoreForecast()
+    {
+        filteredForecasts = null;
+        CountWarmDays();
+    }
+
+    private void Input(ChangeEventArgs arg)
+    {
+        searchTerm = arg.Value.ToString();
+        FilterByName();
+    }
+    private void FilterByName()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredForecasts = null;
+        }
+        else
+        {
+            string searchTermFirstLetter = searchTerm.Substring(0, 1).ToUpper(); 
+
+            filteredForecasts = forecasts.Where(forecast =>
+                forecast.Summary != null &&
+                forecast.Summary.Substring(0, 1).ToUpper() == searchTermFirstLetter
+            ).ToArray();
+        }
+        CountWarmDays();
+    }
+
+    private class WeatherForecast
+    {
+        public DateOnly Date { get; set; }
+        public int TemperatureC { get; set; }
+        public string? Summary { get; set; }
+        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    }
+
+    /*private void FilterByName()
+          {
+          if (string.IsNullOrWhiteSpace(searchTerm))
+              {
+              filteredForecasts = null;
+          }
+              else
+              {
+              filteredForecasts = forecasts.Where(forecast => forecast.Summary != null && forecast.Summary.Contains(searchTerm)).ToArray();
+          }
+      CountWarmDays();
+    }*/
+}
